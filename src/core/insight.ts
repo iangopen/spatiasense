@@ -2,7 +2,7 @@
 // Pure. Knows nothing about any task: it only groups by the dimensions a task
 // declares. When in doubt it stays SILENT — a false claim costs more trust
 // than no claim.
-import { mean, sampleSd, tCritical } from "./stats";
+import { fitLine, mean, sampleSd, tCritical } from "./stats";
 import type { InsightDimension, RoundRecord, TrialResult } from "./types";
 
 /** Every threshold the engine uses. Listed in CLAUDE.md; no other magic numbers. */
@@ -13,8 +13,15 @@ export const INSIGHT = {
   MIN_BIAS_PCT: 3,
   /** "Well calibrated" needs the whole claim interval inside ±this (%). */
   ACCURATE_BAND_PCT: 5,
-  /** Trials per trend window; a trend compares the last window with the one before. */
-  TREND_WINDOW: 20,
+  /**
+   * A trend is the least-squares slope of signed error over (at most) this many of
+   * the most recent trials in scope. 200 = 20 rounds: gradual learning (−15% → −3%
+   * over 200 trials, slope 0.06 pp/trial) is detectable only with a long baseline,
+   * while a longer window would credit "improving" for progress made long ago.
+   */
+  TREND_MAX_TRIALS: 200,
+  /** A scope needs this many trials before a trend is tested at all. */
+  TREND_MIN_TRIALS: 40,
   /** Family-wise error rate, Bonferroni-split across EVERY claim tested in a pass. */
   FAMILY_ALPHA: 0.05,
   /** Confidence level of intervals shown to the player (Student-t). */
@@ -73,9 +80,10 @@ export type Finding =
       /** null = all of this task's trials. */
       dimension: DimensionRef | null;
       values: DimValue[];
-      beforePct: number;
-      afterPct: number;
-      /** Trials compared (two windows). */
+      /** Fitted trend line at the first and last trial of the trend span. */
+      startPct: number;
+      endPct: number;
+      /** Trials the trend line was fitted to. */
       trials: number;
     }
   | {
@@ -302,34 +310,29 @@ function evaluateLevel(c: LevelCandidate, alpha: number): Finding | null {
 }
 
 /**
- * Last TREND_WINDOW trials vs the window before, by a Welch two-sample t-test
- * at the claim alpha. Its interval on the difference is wider than either
- * window's own interval, so a claimed change is outside both windows' noise.
+ * Least-squares slope of signed error against trial order over the last
+ * TREND_MAX_TRIALS trials, t-tested at the claim alpha. Claimed only when the
+ * fitted line also moved |bias| by at least MIN_BIAS_PCT end to end.
  */
 function evaluateTrend(c: TrendCandidate, alpha: number): Finding | null {
-  const w = INSIGHT.TREND_WINDOW;
   const sorted = byTime(c.trials);
-  if (sorted.length < 2 * w) return null;
-  const after = sorted.slice(-w).map((t) => t.signedErrorPct);
-  const before = sorted.slice(-2 * w, -w).map((t) => t.signedErrorPct);
-  const mAfter = mean(after);
-  const mBefore = mean(before);
-  const va = sampleSd(after) ** 2 / after.length;
-  const vb = sampleSd(before) ** 2 / before.length;
-  const se = Math.sqrt(va + vb);
-  if (!(se > 0)) return null;
-  const df = (va + vb) ** 2 / (va ** 2 / (after.length - 1) + vb ** 2 / (before.length - 1));
-  if (Math.abs(mAfter - mBefore) <= tCritical(alpha, df) * se) return null;
-  const magnitudeChange = Math.abs(mAfter) - Math.abs(mBefore);
+  if (sorted.length < INSIGHT.TREND_MIN_TRIALS) return null;
+  const recent = sorted.slice(-INSIGHT.TREND_MAX_TRIALS);
+  const fit = fitLine(recent.map((t) => t.signedErrorPct));
+  if (!fit || !(fit.slopeSe > 0)) return null;
+  if (Math.abs(fit.slope) <= tCritical(alpha, fit.df) * fit.slopeSe) return null;
+  const startPct = fit.intercept;
+  const endPct = fit.intercept + fit.slope * (recent.length - 1);
+  const magnitudeChange = Math.abs(endPct) - Math.abs(startPct);
   if (Math.abs(magnitudeChange) < INSIGHT.MIN_BIAS_PCT) return null;
   return {
     kind: "trend",
     direction: magnitudeChange < 0 ? "improving" : "worsening",
     dimension: c.dimension,
     values: c.values,
-    beforePct: mBefore,
-    afterPct: mAfter,
-    trials: 2 * w,
+    startPct,
+    endPct,
+    trials: recent.length,
   };
 }
 
@@ -345,7 +348,7 @@ export function findInsights(
   const trends: TrendCandidate[] = [];
   const thin: Array<{ dimension: DimensionRef; value: DimValue; count: number }> = [];
 
-  if (trials.length >= 2 * INSIGHT.TREND_WINDOW) trends.push({ dimension: null, values: [], trials: [...trials] });
+  if (trials.length >= INSIGHT.TREND_MIN_TRIALS) trends.push({ dimension: null, values: [], trials: [...trials] });
 
   for (const dim of dimensions) {
     const buckets = bucket(trials, dim);
@@ -357,7 +360,7 @@ export function findInsights(
     }
     for (const c of levelCandidates(trials, dim)) {
       levels.push(c);
-      if (c.trials.length >= 2 * INSIGHT.TREND_WINDOW) trends.push({ dimension: c.dimension, values: c.values, trials: c.trials });
+      if (c.trials.length >= INSIGHT.TREND_MIN_TRIALS) trends.push({ dimension: c.dimension, values: c.values, trials: c.trials });
     }
   }
 

@@ -32,7 +32,7 @@ export function findingText(f: Finding): string {
     case "trend": {
       const subject = f.dimension ? `Your bias at ${f.dimension.label} = ${formatValues(f.values)}` : "Your overall bias";
       const verb = f.direction === "improving" ? "shrunk" : "grown";
-      return `${subject} has ${verb} from ${formatWholePct(f.beforePct)} to ${formatWholePct(f.afterPct)} over your last ${f.trials} trials.`;
+      return `${subject} has ${verb} from about ${formatWholePct(f.startPct)} to about ${formatWholePct(f.endPct)} over your last ${f.trials} trials.`;
     }
     case "needsData":
       return `Play about ${plural(f.needed, "more trial")} at ${f.dimension.label} = ${String(f.value)} to see your bias there.`;

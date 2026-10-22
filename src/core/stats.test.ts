@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mean, sampleSd, tCdf, tCritical, tQuantile } from "./stats";
+import { fitLine, mean, sampleSd, tCdf, tCritical, tQuantile } from "./stats";
 
 describe("stats", () => {
   it("mean and sample sd", () => {
@@ -22,5 +22,19 @@ describe("stats", () => {
     expect(tCdf(0, 5)).toBeCloseTo(0.5, 12);
     expect(tCdf(-1.5, 5) + tCdf(1.5, 5)).toBeCloseTo(1, 12);
     expect(tCdf(2, 5)).toBeGreaterThan(tCdf(1, 5));
+  });
+
+  it("fitLine recovers an exact line and a textbook slope SE", () => {
+    const exact = fitLine([1, 3, 5, 7, 9]);
+    expect(exact?.slope).toBeCloseTo(2, 12);
+    expect(exact?.intercept).toBeCloseTo(1, 12);
+    expect(exact?.slopeSe).toBeCloseTo(0, 9);
+    // y = 2, 1, 4, 3 against 0..3: slope 0.6, RSS 3.2, Sxx 5 → SE = sqrt(3.2/2/5)
+    const noisy = fitLine([2, 1, 4, 3]);
+    expect(noisy?.slope).toBeCloseTo(0.6, 12);
+    expect(noisy?.slopeSe).toBeCloseTo(Math.sqrt(3.2 / 2 / 5), 12);
+    expect(noisy?.df).toBe(2);
+    expect(fitLine([1])).toBeNull();
+    expect(fitLine([1, 2])?.slopeSe).toBeNaN();
   });
 });

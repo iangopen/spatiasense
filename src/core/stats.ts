@@ -102,3 +102,35 @@ export function tQuantile(p: number, df: number): number {
 export function tCritical(alpha: number, df: number): number {
   return tQuantile(1 - alpha / 2, df);
 }
+
+export interface LineFit {
+  /** Fitted value at index 0. */
+  intercept: number;
+  /** Change per index step. */
+  slope: number;
+  /** Standard error of the slope; NaN when it can't be estimated (n < 3). */
+  slopeSe: number;
+  /** Residual degrees of freedom (n − 2). */
+  df: number;
+}
+
+/** Least-squares line through `y` against its own index 0..n−1. Needs n ≥ 2. */
+export function fitLine(y: readonly number[]): LineFit | null {
+  const n = y.length;
+  if (n < 2) return null;
+  const xBar = (n - 1) / 2;
+  const yBar = mean(y);
+  let sxx = 0;
+  let sxy = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = i - xBar;
+    sxx += dx * dx;
+    sxy += dx * ((y[i] ?? 0) - yBar);
+  }
+  const slope = sxy / sxx;
+  const intercept = yBar - slope * xBar;
+  let rss = 0;
+  for (let i = 0; i < n; i++) rss += ((y[i] ?? 0) - (intercept + slope * i)) ** 2;
+  const df = n - 2;
+  return { intercept, slope, slopeSe: df > 0 ? Math.sqrt(rss / df / sxx) : NaN, df };
+}

@@ -78,7 +78,7 @@ describe("V1: engine recovers the truth", () => {
 describe("V2: false-positive guard (full pipeline)", () => {
   it("unbiased player, 100 trials: a bias claim in < 10% of 200 seeds", () => {
     const r = rate(200, (seed) => run({ seed: 10_000 + seed, noiseSd: NOISE, trials: 100 }).some((f) => f.kind === "bias"));
-    expect(r).toBeLessThan(0.1); // measured: 0.055
+    expect(r).toBeLessThan(0.1); // measured: 0.055 (family now includes slope tests)
   });
 });
 
@@ -131,28 +131,49 @@ describe("V4: censored (hitLimit) trials", () => {
   });
 });
 
-describe("V5: trends", () => {
+describe("V5: trends (regression slope over the most recent TREND_MAX_TRIALS)", () => {
   const trendIn = (f: Finding[], dir?: "improving" | "worsening") =>
     f.some((x) => x.kind === "trend" && (dir === undefined || x.direction === dir));
 
-  it("improving from −15% to −3% over 40 trials (SD 6) → 'improving' in ≥ 60% of seeds", () => {
-    const r = rate(100, (seed) =>
-      trendIn(run({ seed: 30_000 + seed, noiseSd: 6, trials: 40, biasByN: allN(-15), improvementPerTrial: 12 / 39 }), "improving"),
+  it("gradual learning, −15% → −3% over 200 trials (SD 10) → 'improving' in ≥ 80% of 200 seeds", () => {
+    const r = rate(200, (seed) =>
+      trendIn(run({ seed: 50_000 + seed, noiseSd: NOISE, trials: 200, biasByN: allN(-15), improvementPerTrial: 12 / 199 }), "improving"),
     );
-    expect(r).toBeGreaterThanOrEqual(0.6); // measured: 0.68
+    expect(r).toBeGreaterThanOrEqual(0.8); // measured: 0.98 (the two-window test managed 0.04)
   });
 
-  it("worsening from −3% to −15% is reported as 'worsening'", () => {
-    const r = rate(100, (seed) =>
-      trendIn(run({ seed: 40_000 + seed, noiseSd: 6, trials: 40, biasByN: allN(-3), improvementPerTrial: -12 / 39 }), "worsening"),
-    );
-    expect(r).toBeGreaterThanOrEqual(0.6);
+  it("reports the fitted start and end of the trend near the truth", () => {
+    const { trials } = simulatePlayer({ seed: 7, noiseSd: 5, trials: 200, biasByN: allN(-15), improvementPerTrial: 12 / 199 });
+    const t = findInsights(trials, dims).findings.find((f) => f.kind === "trend" && f.dimension === null);
+    expect(t?.kind).toBe("trend");
+    if (t?.kind !== "trend") return;
+    expect(Math.abs(t.startPct + 15)).toBeLessThan(2);
+    expect(Math.abs(t.endPct + 3)).toBeLessThan(2);
+    expect(t.trials).toBe(200);
   });
 
-  it("flat player: any trend claimed in < 10% of 200 seeds (unbiased and at −8%)", () => {
+  it("worsening from −3% to −15% over 200 trials is reported as 'worsening'", () => {
+    const r = rate(100, (seed) =>
+      trendIn(run({ seed: 60_000 + seed, noiseSd: NOISE, trials: 200, biasByN: allN(-3), improvementPerTrial: -12 / 199 }), "worsening"),
+    );
+    expect(r).toBeGreaterThanOrEqual(0.8); // measured: 0.985
+  });
+
+  it("only the most recent TREND_MAX_TRIALS count: 300 trials still report a 200-trial window", () => {
+    const { trials } = simulatePlayer({ seed: 8, noiseSd: 5, trials: 300, biasByN: allN(-15), improvementPerTrial: 12 / 299 });
+    const t = findInsights(trials, dims).findings.find((f) => f.kind === "trend" && f.dimension === null);
+    expect(t?.kind === "trend" && t.trials).toBe(INSIGHT.TREND_MAX_TRIALS);
+  });
+
+  it("is silent below TREND_MIN_TRIALS, however steep", () => {
+    const { trials } = simulatePlayer({ seed: 9, noiseSd: 1, trials: INSIGHT.TREND_MIN_TRIALS - 1, biasByN: allN(-30), improvementPerTrial: 0.7 });
+    expect(trendIn(findInsights(trials, dims).findings)).toBe(false);
+  });
+
+  it("flat player: improving or worsening claimed in < 10% of 200 seeds (unbiased and at −8%)", () => {
     for (const bias of [0, -8]) {
       const r = rate(200, (seed) => trendIn(run({ seed: 20_000 + seed, noiseSd: NOISE, trials: 200, biasByN: allN(bias) })));
-      expect(r).toBeLessThan(0.1); // measured: 0.01 (0%), 0.025 (−8%)
+      expect(r).toBeLessThan(0.1); // measured: 0 (0%), 0.01 (−8%)
     }
   });
 });

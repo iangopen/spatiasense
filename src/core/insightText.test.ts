@@ -33,11 +33,11 @@ describe("insightText", () => {
 
   it("trends, improving and (neutrally) worsening", () => {
     expect(
-      findingText({ kind: "trend", direction: "worsening", dimension: n, values: [6, 7, 8], beforePct: -5, afterPct: -11, trials: 40 }),
-    ).toBe("Your bias at n = 6–8 has grown from −5% to −11% over your last 40 trials.");
+      findingText({ kind: "trend", direction: "worsening", dimension: n, values: [6, 7, 8], startPct: -5, endPct: -11, trials: 40 }),
+    ).toBe("Your bias at n = 6–8 has grown from about −5% to about −11% over your last 40 trials.");
     expect(
-      findingText({ kind: "trend", direction: "improving", dimension: null, values: [], beforePct: -14, afterPct: -4, trials: 40 }),
-    ).toBe("Your overall bias has shrunk from −14% to −4% over your last 40 trials.");
+      findingText({ kind: "trend", direction: "improving", dimension: null, values: [], startPct: -14, endPct: -4, trials: 40 }),
+    ).toBe("Your overall bias has shrunk from about −14% to about −4% over your last 40 trials.");
   });
 
   it("needsData", () => {
