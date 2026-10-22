@@ -223,9 +223,15 @@ Rules (all enforced by tests; the engine stays SILENT when in doubt):
   accurate ranges, trends). Claim alpha = `FAMILY_ALPHA / familySize`.
 - bias: Student-t interval at claim alpha excludes 0 AND |mean| ≥ MIN_BIAS_PCT.
 - accurate: the claim-alpha interval lies inside ±`ACCURATE_BAND_PCT`.
-- trend: last `TREND_WINDOW` trials vs the window before, Welch t-test at
-  claim alpha, AND |bias| changed by ≥ MIN_BIAS_PCT. "improving" if |bias|
-  shrank, "worsening" (phrased neutrally) if it grew.
+- trend: least-squares slope of signed error against trial order over the last
+  `TREND_MAX_TRIALS` trials in scope (needs `TREND_MIN_TRIALS`), t-test on the
+  slope (df = n − 2) at claim alpha, AND the fitted line moved |bias| by ≥
+  MIN_BIAS_PCT end to end. "improving" if |bias| shrank, "worsening"
+  (phrased neutrally) if it grew.
+- progress: a range with enough data but no bias/accurate claim gets "No clear
+  bias at n = 5–8 yet (14 trials)." Sample size only, NEVER a direction
+  (a test forbids over/under/short/long/lean). At most `MAX_PROGRESS_FINDINGS`,
+  fewest trials first, shown beside the needsData prompts.
 - needsData: thin groups, smallest first, at most MAX_NEEDS_DATA_FINDINGS.
 - Displayed intervals are 95% Student-t (not ±1.96).
 
@@ -236,11 +242,13 @@ Thresholds — the ONLY tunables, all in the exported `INSIGHT` object:
 | `MIN_TRIALS_PER_GROUP`    | 8     | trials before any claim; below → hollow dot, needsData |
 | `MIN_BIAS_PCT`            | 3     | smallest \|mean\| called a bias; class boundary for merging |
 | `ACCURATE_BAND_PCT`       | 5     | "well calibrated" interval must sit inside ±this |
-| `TREND_WINDOW`            | 20    | trials per trend window (needs 2× in scope) |
+| `TREND_MAX_TRIALS`        | 200   | most recent trials the trend slope is fitted to (20 rounds) |
+| `TREND_MIN_TRIALS`        | 40    | trials in scope before a trend is tested at all |
 | `FAMILY_ALPHA`            | 0.05  | family-wise error rate, Bonferroni-split |
 | `CI_LEVEL`                | 0.95  | level of intervals shown to the player |
 | `MAX_CENSORED_FRACTION`   | 0.10  | above this, withhold undershoot/accurate claims |
 | `MAX_NEEDS_DATA_FINDINGS` | 2     | "play more" prompts shown at once |
+| `MAX_PROGRESS_FINDINGS`   | 3     | "no clear bias yet" lines shown at once |
 | `ROLLING_ROUNDS`          | 5     | TrendChart rolling-average window |
 
 ---
@@ -385,7 +393,29 @@ Only verified facts. Each line says HOW it was verified.
   drags dropped their moves — a tool artifact, not the app.) No
   `spatiasense:` key was written (round quit before 10 trials).
 
+- Session 3, local: `npm run test` 186/186 and `npm run build` clean (macOS,
+  node 25). Measured over seeded sims (SD 10, 200 seeds each):
+  - Gradual −15% → −3% "improving": 100 trials 81.5%, 150 91.5%,
+    **200 98.0%**, 300 99.5% (SD 6: ≥ 99.5% from 100). Worsening −3% → −15%
+    over 200: 98.5%. (Old window test: 4%.)
+  - Flat player, any trend claim, 200 trials: 0/200 (bias 0), 2/200 = 1.0%
+    (bias −8%), 0/200 at 100 trials.
+  - Full-pipeline bias false positive, unbiased: 100 trials 11/200 = 5.5%
+    (unchanged), 200 trials 3.5%.
+  - Progress sentence never matches over/under/short/long/lean over 300 sim
+    players (test); multiply fit, constant anchored track y = 300, detached
+    separation ≥ 120, endpoint spread ≥ 300 for every n: unit tests.
+  - Copy my data JSON round-trips through `parseRounds` unchanged (test).
+
 ### Open / unverified
+
+- NOT PUSHED (session 3): the Chrome extension was not connected, so the
+  required browser check is undone: play a round at 390px and 1440px (centered
+  track, no border, keyboard focus on the track), read the Insight progress
+  sentences, press Copy my data. Then push, watch the Actions run, and `curl -I`
+  https://iangopen.github.io/spatiasense/ and its JS asset. `gh` is not
+  installed on this Mac; use the public API with curl for run status.
+- The new live URL is unverified; the old URL's localStorage does not carry over.
 
 - UI not yet exercised in a real browser (the Chrome extension was not
   connected in session 1): drag, pointer capture, Enter-to-confirm, phone
@@ -447,7 +477,7 @@ Choices the spec didn't dictate, with a one-line reason.
   Measured per-group: ±1.96 false-alarmed in 26–45% of unbiased seeds;
   Bonferroni with z ≈ 10%; t + Bonferroni ≈ 4%; full pipeline 5.5%.
   Family = every claim tested in a pass (Ian's addition).
-- **Trend test = Welch two-sample t at claim alpha**, not "difference vs each
+- **(Superseded in session 3 by the regression-slope test, below.) Trend test = Welch two-sample t at claim alpha**, not "difference vs each
   window's CI": the latter false-alarmed 8.5% on a flat −8% player (now 2.5%).
   Welch's interval is wider than either window's, so a claimed change is
   outside both windows' noise.
@@ -489,6 +519,32 @@ Choices the spec didn't dictate, with a one-line reason.
   is configured once via the API.
 - **roundSeed** comes from `crypto.getRandomValues` in `App.tsx` (outside core).
 
+- **Trend = regression slope (session 3).** Two adjacent 20-trial windows
+  detected a gradual −15% → −3% improvement over 200 trials in 4% of seeds;
+  the slope over the last `TREND_MAX_TRIALS` = 200 trials detects it in 98%
+  (SD 10). 200 because power on a gradual slope grows ~N^1.5, while a longer
+  window would credit "improving" for progress made long ago. Min 40 trials
+  keeps the Bonferroni family the same size as before. Trial index is the
+  rank within the scope (time order), not the timestamp. The finding's
+  start/end are the FITTED line's ends, so the text says "about".
+  `TREND_WINDOW` removed (nothing uses it).
+- **Progress lines (session 3):** unclaimed testable ranges say only how many
+  trials they have. The range itself is still formed by point-estimate class
+  (internal, never shown). Capped at 3, fewest trials first.
+- **Placement (session 3): SEEDS FROM BEFORE THIS CHANGE NO LONGER REGENERATE
+  THE SAME TRIALS** (trackY is no longer drawn, so the RNG stream shifted;
+  detached reference y changed too). Stored stats are unaffected: they hold
+  lengths and percentages, not geometry. Track y is fixed at 300 (center) in
+  both layouts; only x placement varies (x placement is what prevents
+  landmark-learning). Detached reference is above or below at ≥ 120 units,
+  random x. The play area has no panel fill, border or focus frame (its edges
+  are landmarks); keyboard focus shows on the track line instead.
+- **Copy my data:** copies `serializeRounds` of the readable stored rounds;
+  if the clipboard is refused, the JSON is shown in a read-only textarea.
+  Unreadable rounds are not exported (History already warns about them).
+- **Repo/account rename:** `iangopenbusinessai-lab` → `iangopen`. Historical
+  STATUS lines keep the old URL, labelled pre-rename.
+
 ## Session log
 
 - **Session 0 (planning):** spec and this file written. No code exists.
@@ -506,3 +562,7 @@ Choices the spec didn't dictate, with a one-line reason.
   favicon; shared-origin storage guard test; CLAUDE.md deploy flow. Found
   the repo PUBLIC (Ian's change) and Pages already on a legacy branch build.
   Pushed on Ian's "push"; CI green; live site verified (see STATUS).
+- **Session 3 (real-use fixes):** remote and URLs moved to `iangopen`;
+  regression-slope trend; per-range progress lines; centered track and
+  borderless stage; Copy my data; custom-domain roadmap line. Chrome
+  extension was NOT connected, so nothing was pushed (see Open).
