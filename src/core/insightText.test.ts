@@ -40,6 +40,15 @@ describe("insightText", () => {
     ).toBe("Your overall bias has shrunk from about −14% to about −4% over your last 40 trials.");
   });
 
+  it("progress states the sample size and nothing else", () => {
+    expect(findingText({ kind: "progress", dimension: n, values: [5, 6, 7, 8], count: 14 })).toBe(
+      "No clear bias at n = 5–8 yet (14 trials).",
+    );
+    expect(findingText({ kind: "progress", dimension: layout, values: ["detached"], count: 1 })).toBe(
+      "No clear bias at layout = detached yet (1 trial).",
+    );
+  });
+
   it("needsData", () => {
     expect(findingText({ kind: "needsData", dimension: n, value: 7, count: 2, needed: 6 })).toBe(
       "Play about 6 more trials at n = 7 to see your bias there.",

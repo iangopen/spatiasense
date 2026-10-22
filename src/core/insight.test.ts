@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INSIGHT, findInsights, groupStats, roundSeries, type Finding } from "./insight";
+import { findingText } from "./insightText";
 import { simulatePlayer, type SimOptions } from "./sim";
 import { parseRounds } from "./storage";
 import type { TrialResult } from "./types";
@@ -175,6 +176,57 @@ describe("V5: trends (regression slope over the most recent TREND_MAX_TRIALS)", 
       const r = rate(200, (seed) => trendIn(run({ seed: 20_000 + seed, noiseSd: NOISE, trials: 200, biasByN: allN(bias) })));
       expect(r).toBeLessThan(0.1); // measured: 0 (0%), 0.01 (−8%)
     }
+  });
+});
+
+describe("progress findings", () => {
+  const DIRECTIONAL = /\b(over|under|short|long|lean)/i;
+  const progressOf = (f: Finding[]) => f.filter((x): x is Extract<Finding, { kind: "progress" }> => x.kind === "progress");
+
+  it("an unclaimed, testable range reports its range and trial count", () => {
+    // 14 trials at n = 5 and 14 at n = 6, around −4%: classed "under" but far too noisy to claim.
+    const trials = range(0, 27).map((i) => mk(-4 + ((i >> 1) % 2 ? 25 : -25), 5 + (i % 2), i));
+    const f = findInsights(trials, [nDim]).findings;
+    expect(f.some((x) => x.kind === "bias" || x.kind === "accurate")).toBe(false);
+    const [p] = progressOf(f);
+    expect(p && [p.values, p.count]).toEqual([[5, 6], 28]);
+    expect(p && findingText(p)).toBe("No clear bias at n = 5–6 yet (28 trials).");
+  });
+
+  it("a claimed range gets no progress line; unclaimed neighbours still do", () => {
+    const { trials } = simulatePlayer({ seed: 3, noiseSd: NOISE, trials: 300, biasByN: V1_BIAS });
+    const f = findInsights(trials, dims).findings;
+    const claimed = f.filter((x) => x.kind === "bias" || x.kind === "accurate");
+    for (const p of progressOf(f)) {
+      expect(
+        claimed.some((c) => (c.kind === "bias" || c.kind === "accurate") && c.dimension.key === p.dimension.key && JSON.stringify(c.values) === JSON.stringify(p.values)),
+      ).toBe(false);
+    }
+  });
+
+  it("at most MAX_PROGRESS_FINDINGS, fewest trials first", () => {
+    // Alternating strong over/under per n: every n is its own range, none claimable at 8–9 noisy trials.
+    const trials = range(2, 8).flatMap((n) =>
+      range(0, 8 + n - 2).map((i) => mk((n % 2 ? 1 : -1) * (6 + (i % 2 ? 30 : -30)), n, n * 100 + i)),
+    );
+    const p = progressOf(findInsights(trials, [nDim]).findings);
+    expect(p.length).toBeLessThanOrEqual(INSIGHT.MAX_PROGRESS_FINDINGS);
+    expect(p.map((x) => x.count)).toEqual([...p.map((x) => x.count)].sort((a, b) => a - b));
+  });
+
+  it("the sentence never contains a directional word, across many players", () => {
+    let seen = 0;
+    for (let seed = 0; seed < 60; seed++) {
+      for (const bias of [-25, -8, 0, 8, 25]) {
+        const trials = simulatePlayer({ seed: 70_000 + seed, noiseSd: 14, trials: 30 + (seed % 5) * 20, biasByN: allN(bias) }).trials;
+        for (const p of progressOf(findInsights(trials, dims).findings)) {
+          seen++;
+          expect(findingText(p)).not.toMatch(DIRECTIONAL);
+          expect(findingText(p)).toMatch(/^No clear bias at \S+ = \S+ yet \(\d+ trials?\)\.$/);
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(20);
   });
 });
 

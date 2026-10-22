@@ -30,6 +30,8 @@ export const INSIGHT = {
   MAX_CENSORED_FRACTION: 0.1,
   /** At most this many "play more" prompts at once. */
   MAX_NEEDS_DATA_FINDINGS: 2,
+  /** At most this many "no clear bias yet" progress lines at once (fewest trials first). */
+  MAX_PROGRESS_FINDINGS: 3,
   /** Rounds in the trend chart's rolling average. */
   ROLLING_ROUNDS: 5,
 } as const;
@@ -85,6 +87,17 @@ export type Finding =
       endPct: number;
       /** Trials the trend line was fitted to. */
       trials: number;
+    }
+  | {
+      /**
+       * A range with enough data to be tested but no claim yet. States the
+       * sample size ONLY — never a direction: a lean from a few trials is the
+       * same overclaim the thresholds exist to prevent.
+       */
+      kind: "progress";
+      dimension: DimensionRef;
+      values: DimValue[];
+      count: number;
     }
   | {
       kind: "needsData";
@@ -368,19 +381,20 @@ export function findInsights(
   const familySize = levels.length + trends.length;
   const claimAlpha = INSIGHT.FAMILY_ALPHA / Math.max(1, familySize);
 
+  const evaluated = levels.map((c) => ({ c, f: evaluateLevel(c, claimAlpha) }));
   const findings: Finding[] = [];
-  for (const c of levels) {
-    const f = evaluateLevel(c, claimAlpha);
-    if (f?.kind === "bias") findings.push(f);
-  }
+  for (const { f } of evaluated) if (f?.kind === "bias") findings.push(f);
   for (const c of trends) {
     const f = evaluateTrend(c, claimAlpha);
     if (f) findings.push(f);
   }
-  for (const c of levels) {
-    const f = evaluateLevel(c, claimAlpha);
-    if (f?.kind === "accurate") findings.push(f);
-  }
+  for (const { f } of evaluated) if (f?.kind === "accurate") findings.push(f);
+  evaluated
+    .filter(({ f }) => f === null)
+    .map(({ c }) => ({ dimension: c.dimension, values: c.values, count: c.trials.length }))
+    .sort((a, b) => a.count - b.count)
+    .slice(0, INSIGHT.MAX_PROGRESS_FINDINGS)
+    .forEach((g) => findings.push({ kind: "progress", ...g }));
   thin
     .sort((a, b) => a.count - b.count || compareValues(a.value, b.value))
     .slice(0, INSIGHT.MAX_NEEDS_DATA_FINDINGS)

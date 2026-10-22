@@ -34,6 +34,8 @@ export function findingText(f: Finding): string {
       const verb = f.direction === "improving" ? "shrunk" : "grown";
       return `${subject} has ${verb} from about ${formatWholePct(f.startPct)} to about ${formatWholePct(f.endPct)} over your last ${f.trials} trials.`;
     }
+    case "progress":
+      return `No clear bias at ${f.dimension.label} = ${formatValues(f.values)} yet (${plural(f.count, "trial")}).`;
     case "needsData":
       return `Play about ${plural(f.needed, "more trial")} at ${f.dimension.label} = ${String(f.value)} to see your bias there.`;
   }

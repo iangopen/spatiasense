@@ -91,7 +91,7 @@ export function Insight({ onBack }: InsightProps) {
         <>
           <ul className="findings">
             {report.findings.length === 0 && (
-              <li className="finding quiet-finding">Nothing is clear enough to claim yet. Keep playing.</li>
+              <li className="finding quiet-finding">No trials with readable settings for this task yet.</li>
             )}
             {report.findings.map((f, i) => (
               <li key={i} className={`finding finding-${f.kind}`}>
