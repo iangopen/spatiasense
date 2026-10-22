@@ -41,7 +41,9 @@ central and (b) preserves data needed for bias-over-time analysis.
 
 ## Environment
 
-- Windows / PowerShell. Every command run or documented must work in
+- Ian works on both Windows (PowerShell) and macOS (zsh), synced through
+  GitHub, so every command run or documented must work in both. Every command
+  run or documented must work in
   PowerShell. Chain commands with `;` — not `&&` (PowerShell 5.1 lacks it).
 - NEVER run a command that waits for interactive input; it hangs the session.
   Use non-interactive flags, or write files by hand.
@@ -312,7 +314,7 @@ the `src/**/*.test.ts` include in `vite.config.ts`).
 
 ## Roadmap (in order)
 
-1. Bias-vs-N chart (hand-rolled SVG, no chart library)
+1. ~~Bias-vs-N chart (hand-rolled SVG, no chart library)~~ — DONE (session 2)
 2. More task types: fraction, angle, area, rotated/vertical bars,
    reference-disappears mode
 3. Daily seed mode
@@ -322,8 +324,6 @@ A custom domain is required before accounts. Every Pages site on iangopen.github
 
 Ideas parked mid-session go here, not into the code:
 
-- Trend by regression slope over all trials in a scope (much more power for
-  gradual learning than two adjacent 20-trial windows — see STATUS).
 - Shrinkage estimates across adjacent n, so sparse n values borrow strength
   instead of going silent.
 - Suppress category findings that just restate an ordinal range.
@@ -418,21 +418,24 @@ Only verified facts. Each line says HOW it was verified.
   hash as the local build). First check of the post-rename URL. Not played
   on the live URL; the old URL's localStorage does not carry over.
 
+- Checked by Ian by hand (not by Claude), as of session 4: phone (touch)
+  play, drag, Enter-to-confirm and History all work.
+- Session 4: `npm run test` 193/193 (new: View slider attributes via
+  `renderToStaticMarkup`, `markerForKey` Home/End/arrows/locked). README
+  and LICENSE added; no browser tool was connected.
+
 ### Open / unverified
 
-
-- UI not yet exercised in a real browser (the Chrome extension was not
-  connected in session 1): drag, pointer capture, Enter-to-confirm, phone
-  layout, and History are unverified by hand.
-- Nothing Spatiasense-specific is open for the deploy itself. Still open from
-  earlier sessions: phone (touch) play, History with real rounds, Insight
-  with real rounds.
-- Insight with REAL played rounds not checked in a browser (only demo data
-  and unit tests with stored-round JSON).
-- Trend detection is weak for gradual learning (4% at 200 trials): a design
-  limit of adjacent-window comparison, not a bug. See parked ideas.
+- Insight with REAL played rounds on the live URL (only demo data, unit tests
+  with stored-round JSON, and Ian's dev-server check so far).
 - "Well calibrated" for a 3-value range needs ~400 trials at SD 10; players
   will see bias findings long before calibration credit.
+- Session 4, needs a browser (none was connected): tab to the play area, use
+  arrows / Shift+arrows / Home / End, confirm the focus indicator on the track
+  is visible, and confirm the accessibility tree shows a slider with the
+  "No marker yet" / "Marker placed" value text; a real screen reader pass.
+- README screenshots (Play mid-trial, feedback with ghost tiles, Insight with
+  the dev demo player) under `docs/`: not captured; none added.
 
 ---
 
@@ -549,6 +552,18 @@ Choices the spec didn't dictate, with a one-line reason.
 - **Repo/account rename:** `iangopenbusinessai-lab` → `iangopen`. Historical
   STATUS lines keep the old URL, labelled pre-rename.
 
+- **Slider semantics (session 4).** The play area is `role="slider"` with
+  `aria-valuemin/max/now` as lengths from the origin and an accessible name
+  that states the task. `aria-valuetext` is only "No marker yet" / "Marker
+  placed": a screen reader announcing the length would hand blind-to-the-ruler
+  players exactly the measurement the task withholds. Trade-off: a non-sighted
+  player gets no spoken feedback about position while placing, so the
+  slider tells them where the marker is only after feedback. `aria-valuenow`
+  is still exposed because the slider role requires it; assistive tech that
+  ignores valuetext could read it, which is a known leak. Home/End jump to the
+  origin / track max (pure `markerForKey` in core, tested, ignored when locked).
+- **README numbers** are the measured rates in STATUS, not rounded claims.
+
 ## Session log
 
 - **Session 0 (planning):** spec and this file written. No code exists.
@@ -570,3 +585,5 @@ Choices the spec didn't dictate, with a one-line reason.
   regression-slope trend; per-range progress lines; centered track and
   borderless stage; Copy my data; custom-domain roadmap line. Chrome
   extension was NOT connected, so nothing was pushed (see Open).
+- **Session 4 (polish):** slider semantics, Home/End, README, MIT LICENSE,
+  CLAUDE.md cleanup. No scoring, generation, insight or storage changes.
