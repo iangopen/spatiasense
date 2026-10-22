@@ -44,6 +44,35 @@ export function clampMarker(trial: MultiplyTrial, x: number): number {
   return clamp(x, trial.origin, TRACK_MAX_X);
 }
 
+/** Keyboard step sizes in viewBox units. */
+export const KEY_STEP = 1;
+export const KEY_STEP_SHIFT = 10;
+
+/**
+ * Where the marker goes for a key press, or null when the key does nothing
+ * (unrelated key, or the trial is locked). Arrows nudge, Home/End jump to the
+ * origin / the track maximum — the keys a slider is expected to support.
+ */
+export function markerForKey(
+  trial: MultiplyTrial,
+  current: MultiplyResponse | null,
+  key: string,
+  shiftKey: boolean,
+  locked: boolean,
+): MultiplyResponse | null {
+  if (locked) return null;
+  if (key === "Home") return trial.origin;
+  if (key === "End") return TRACK_MAX_X;
+  if (key !== "ArrowLeft" && key !== "ArrowRight") return null;
+  const step = (shiftKey ? KEY_STEP_SHIFT : KEY_STEP) * (key === "ArrowLeft" ? -1 : 1);
+  return clampMarker(trial, (current ?? trial.origin) + step);
+}
+
+/** Spoken value of the slider. Deliberately never a number: a length would be the ruler the task withholds. */
+export function markerValueText(response: MultiplyResponse | null): string {
+  return response === null ? "No marker yet" : "Marker placed";
+}
+
 export function trueEndX(trial: MultiplyTrial): number {
   return trial.origin + trial.n * trial.refLength;
 }

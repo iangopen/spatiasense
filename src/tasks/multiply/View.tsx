@@ -1,12 +1,13 @@
-import { useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { VIEW_H, VIEW_W, clientToViewBox } from "../../core/geometry";
-import { BAR_H, TRACK_MAX_X, clampMarker, trueEndX, type MultiplyResponse, type MultiplyTrial } from "../../core/tasks/multiply";
+import { BAR_H, TRACK_MAX_X, clampMarker, markerForKey, markerValueText, trueEndX, type MultiplyResponse, type MultiplyTrial } from "../../core/tasks/multiply";
 import type { ViewProps } from "../props";
 
 const MARKER_REACH = 34;
 
 export function MultiplyView({ trial, response, phase, onResponse }: ViewProps<MultiplyTrial, MultiplyResponse>) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const promptId = useId();
   const locked = phase === "feedback";
 
   const place = (e: PointerEvent<SVGSVGElement>) => {
@@ -32,10 +33,10 @@ export function MultiplyView({ trial, response, phase, onResponse }: ViewProps<M
   };
 
   const onKeyDown = (e: KeyboardEvent<SVGSVGElement>) => {
-    if (locked || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+    const next = markerForKey(trial, response, e.key, e.shiftKey, locked);
+    if (next === null) return;
     e.preventDefault();
-    const step = (e.shiftKey ? 10 : 1) * (e.key === "ArrowLeft" ? -1 : 1);
-    onResponse(clampMarker(trial, (response ?? trial.origin) + step));
+    onResponse(next);
   };
 
   const { origin, trackY, refX, refY, refLength, n } = trial;
@@ -44,7 +45,7 @@ export function MultiplyView({ trial, response, phase, onResponse }: ViewProps<M
 
   return (
     <div className="task-view">
-      <p className="prompt">
+      <p className="prompt" id={promptId}>
         Where would <strong>{n}</strong> of these bars end, laid end to end?
         {trial.layout === "detached" && " Start from the marked origin."}
       </p>
@@ -52,8 +53,14 @@ export function MultiplyView({ trial, response, phase, onResponse }: ViewProps<M
         ref={svgRef}
         className="stage"
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        role="application"
-        aria-label={`Place the end of ${n} bars. Arrow keys nudge the marker.`}
+        role="slider"
+        aria-label={`Place the end of ${n} bars`}
+        aria-describedby={promptId}
+        aria-orientation="horizontal"
+        aria-valuemin={0}
+        aria-valuemax={Math.round(TRACK_MAX_X - origin)}
+        aria-valuenow={response === null ? 0 : Math.round(response - origin)}
+        aria-valuetext={markerValueText(response)}
         tabIndex={0}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
