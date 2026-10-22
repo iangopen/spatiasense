@@ -45,15 +45,20 @@ central and (b) preserves data needed for bias-over-time analysis.
   PowerShell. Chain commands with `;` — not `&&` (PowerShell 5.1 lacks it).
 - NEVER run a command that waits for interactive input; it hangs the session.
   Use non-interactive flags, or write files by hand.
-- GitHub: `iangopenbusinessai-lab/spatiasense` (PUBLIC — required for Pages on
-  the free plan; visibility is Ian's call, never change it). `gh` is authenticated.
+- GitHub: `iangopen/spatiasense` (PUBLIC — required for Pages on the free
+  plan; visibility is Ian's call, never change it). The account was renamed
+  from `iangopenbusinessai-lab`; Pages does NOT redirect old usernames.
+  `gh` was authenticated on the Windows machine; it is not installed on the
+  current macOS machine (use `curl` against the public GitHub API instead).
 - Local dev ports: 5199 belongs to another project (strategylab) — use another
   (5231 worked). `npm run preview` uses 4173.
 
 ## Deploy
 
 GitHub Pages via GitHub Actions. Push to `main` → `.github/workflows/deploy.yml`
-→ Pages. Live: https://iangopenbusinessai-lab.github.io/spatiasense/
+→ Pages. Live: https://iangopen.github.io/spatiasense/
+  localStorage is per ORIGIN: history saved at the old
+  `iangopenbusinessai-lab.github.io` URL does not carry over to the new one.
 
 - Build job: checkout → setup-node (Node 24, npm cache) → `npm ci` →
   `npm run test` → `npm run build` → upload `dist/`. Tests run BEFORE the
@@ -64,7 +69,7 @@ GitHub Pages via GitHub Actions. Push to `main` → `.github/workflows/deploy.ym
   `import.meta.env.BASE_URL`) — a hard-coded root path is a blank page in
   production. Check with `npm run preview` → http://localhost:4173/spatiasense/.
 - SHARED ORIGIN: every Pages project on this account shares
-  `iangopenbusinessai-lab.github.io` and ONE localStorage. Keys must start
+  `iangopen.github.io` and ONE localStorage. Keys must start
   with `spatiasense:`; never call `clear()`, never use sessionStorage or
   IndexedDB. Enforced by `src/storageSafety.test.ts`.
 
@@ -356,7 +361,7 @@ Only verified facts. Each line says HOW it was verified.
   round-trip and corrupt/unknown-version data; `src/core/` contains no
   `Math.random`/`Date.now`/React/DOM access (guard test).
 - Dev server boots and serves every module (HTTP 200) — checked via curl.
-- Repo `iangopenbusinessai-lab/spatiasense` was PRIVATE after session 1;
+- Repo `iangopenbusinessai-lab/spatiasense` (pre-rename name) was PRIVATE after session 1;
   it is PUBLIC as of the deploy session (`gh repo view`, changed by Ian).
 - Deploy session, local: `npm run test` 171/171 (count includes per-file
   guard cases) and `npm run build` clean. `npm run preview` →
@@ -368,7 +373,7 @@ Only verified facts. Each line says HOW it was verified.
 - LIVE (deploy session, push of 3881c50): Pages source switched to
   `build_type=workflow` (`gh api`); Actions run 35836740764 — build ✅
   (171 tests passed in CI, then build), deploy ✅ (`gh run watch`).
-  `curl -I` → 200 for https://iangopenbusinessai-lab.github.io/spatiasense/,
+  `curl -I` → 200 for https://iangopenbusinessai-lab.github.io/spatiasense/ (pre-rename URL),
   its JS (`index-DP3irSSw.js`, same hash as local), CSS and favicon.svg.
 - LIVE play in Chrome (desktop): page/JS/CSS 200 in the network log; one
   trial confirmed with Enter → "+0.5% — overshot · score 99", 6 ghosts and
@@ -404,7 +409,7 @@ Choices the spec didn't dictate, with a one-line reason.
   TrialResult would force placeholder values like 0 into stored data.
 - **`defineTask(core, View, Settings)`** — each task supplies its own params
   form; if Home hard-coded n/layout, every new task would mean editing a screen.
-- **Repo stays `iangopenbusinessai-lab/spatiasense`, private** — set via
+- **(Superseded: repo is PUBLIC and now `iangopen/spatiasense`.) Repo stayed `iangopenbusinessai-lab/spatiasense`, private** — set via
   `gh repo edit --visibility private` (it was public).
 - **Tests colocated** as `*.test.ts`. The core purity guard uses
   `import.meta.glob(..., { query: "?raw" })` so tests need no Node types.

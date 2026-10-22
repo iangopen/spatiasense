@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as storage from "./core/storage";
 
 // Every GitHub Pages project on this account shares ONE origin
-// (iangopenbusinessai-lab.github.io) and therefore ONE localStorage.
+// (iangopen.github.io) and therefore ONE localStorage.
 // Spatiasense must only ever touch its own "spatiasense:" keys.
 
 const sources = Object.entries(
