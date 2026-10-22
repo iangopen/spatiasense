@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { summarize } from "../core/scoring";
-import { loadRounds } from "../persistence";
+import { copyText, exportJson, loadRounds } from "../persistence";
 import { findTask } from "../tasks/registry";
 import { pct } from "./Results";
 
@@ -12,6 +12,12 @@ interface HistoryProps {
 export function History({ onBack, onInsight }: HistoryProps) {
   const { rounds, problems } = useMemo(() => loadRounds(), []);
   const newestFirst = [...rounds].sort((a, b) => b.finishedAt - a.finishedAt);
+  // "copied", or the JSON itself when the clipboard is unavailable so it can be copied by hand.
+  const [copied, setCopied] = useState<"copied" | string | null>(null);
+  const copyData = async () => {
+    const json = exportJson();
+    setCopied((await copyText(json)) ? "copied" : json);
+  };
 
   return (
     <section className="screen history">
@@ -52,7 +58,19 @@ export function History({ onBack, onInsight }: HistoryProps) {
       <div className="actions">
         <button onClick={onBack}>Back</button>
         <button onClick={onInsight}>Your bias</button>
+        {newestFirst.length > 0 && <button onClick={() => void copyData()}>Copy my data</button>}
       </div>
+      {copied === "copied" && (
+        <p className="note" role="status">
+          Copied {newestFirst.length} round(s) as JSON.
+        </p>
+      )}
+      {copied !== null && copied !== "copied" && (
+        <label className="field">
+          <span>Couldn't reach the clipboard. Select all and copy:</span>
+          <textarea readOnly rows={6} value={copied} onFocus={(e) => e.currentTarget.select()} />
+        </label>
+      )}
     </section>
   );
 }

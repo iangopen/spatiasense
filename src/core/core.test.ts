@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { clientToViewBox } from "./geometry";
 import { hashSeeds, mulberry32, randInt, trialSeed } from "./rng";
 import { formatSignedError, formatTrialError, scoreFromErrorPct, signedErrorPct, summarize } from "./scoring";
+import { simulatePlayer } from "./sim";
 import { ROUNDS_KEY, appendRound, parseRounds, serializeRounds } from "./storage";
 import type { RoundRecord, TrialResult } from "./types";
 
@@ -113,6 +114,12 @@ describe("storage", () => {
 
   it("uses a versioned key", () => {
     expect(ROUNDS_KEY).toBe("spatiasense:v1:rounds");
+  });
+
+  it("exported JSON of many real-shaped rounds (incl. hitLimit) parses back unchanged", () => {
+    const { rounds } = simulatePlayer({ seed: 4, noiseSd: 15, trials: 120, biasByN: { 5: 25, 6: 25, 7: 25, 8: 25 } });
+    expect(rounds.some((r) => r.trials.some((t) => t.hitLimit))).toBe(true);
+    expect(parseRounds(serializeRounds(rounds))).toEqual({ rounds, problems: [] });
   });
 
   it("round-trips", () => {

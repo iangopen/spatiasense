@@ -310,6 +310,8 @@ the `src/**/*.test.ts` include in `vite.config.ts`).
 3. Daily seed mode
 4. Supabase accounts + leaderboard
 
+A custom domain is required before accounts. Every Pages site on iangopen.github.io shares one origin and one localStorage, so auth tokens would be readable by every other project on it.
+
 Ideas parked mid-session go here, not into the code:
 
 - Trend by regression slope over all trials in a scope (much more power for

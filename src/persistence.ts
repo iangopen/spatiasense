@@ -23,3 +23,18 @@ export function saveRound(round: RoundRecord): boolean {
     return false;
   }
 }
+
+/** The JSON "Copy my data" puts on the clipboard: every readable stored round. */
+export function exportJson(): string {
+  return serializeRounds(loadRounds().rounds);
+}
+
+/** Copies text to the clipboard. False when the browser refuses (the caller shows the text instead). */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
