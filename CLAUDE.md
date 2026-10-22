@@ -421,6 +421,12 @@ Only verified facts. Each line says HOW it was verified.
 - Session 4: `npm run test` 193/193 (new: View slider attributes via
   `renderToStaticMarkup`, `markerForKey` Home/End/arrows/locked). README
   and LICENSE added; no browser tool was connected.
+- LIVE (session 4, push of f2263f2): Actions run 39819290337 — build ✅,
+  deploy ✅ (polled with curl). `curl -I`: HTTP 200 for
+  https://iangopen.github.io/spatiasense/ and `assets/index-Cf--1BKC.js`
+  (read from the live index.html; same hash as the local build); 200 for the
+  README's LICENSE link on github.com and raw.githubusercontent.com. The
+  README has no image paths (no screenshots).
 
 ### Open / unverified
 
