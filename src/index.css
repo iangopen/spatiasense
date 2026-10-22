@@ -91,11 +91,12 @@ button.quiet { padding: 6px 12px; }
   height: auto;
   touch-action: none;
   user-select: none;
-  border-radius: 10px;
   cursor: crosshair;
+  /* No border, outline or tinted panel: the play area's edges are landmarks too. */
+  outline: none;
 }
-.stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.stage-bg { fill: var(--panel); }
+/* Keyboard focus shows on the track itself, not as a frame around the area. */
+.stage:focus-visible .track { stroke: var(--accent); stroke-width: 4; }
 .track { stroke: var(--line); stroke-width: 2; }
 .origin-mark { stroke: var(--fg); stroke-width: 3; }
 .ref-bar { fill: var(--ref); }

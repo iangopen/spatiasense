@@ -48,10 +48,13 @@ export function trueEndX(trial: MultiplyTrial): number {
   return trial.origin + trial.n * trial.refLength;
 }
 
-// Vertical bands keep the detached reference and the track well apart.
-const TOP_BAND: readonly [number, number] = [MARGIN + 60, 240];
-const BOTTOM_BAND: readonly [number, number] = [360, VIEW_H - MARGIN - 60];
-const ANCHORED_BAND: readonly [number, number] = [150, VIEW_H - 150];
+/** The track sits at the vertical center in both layouts: only x placement varies. */
+export const TRACK_Y = VIEW_H / 2;
+/** A detached reference bar is at least this far above or below the track. */
+export const MIN_DETACHED_DY = 120;
+// Reference-bar centers stay clear of the margin by half a bar plus a little air.
+const REF_Y_ABOVE: readonly [number, number] = [MARGIN + BAR_H, TRACK_Y - MIN_DETACHED_DY];
+const REF_Y_BELOW: readonly [number, number] = [TRACK_Y + MIN_DETACHED_DY, VIEW_H - MARGIN - BAR_H];
 /** Fraction of the true length always left free to the right of the true endpoint. */
 export const OVERSHOOT_ROOM = 0.3;
 /** Minimum horizontal offset between a detached reference and the track origin. */
@@ -71,16 +74,11 @@ function generate(params: MultiplyParams, rng: Rng): MultiplyTrial {
   const refLength = total / n;
   const origin = end - total;
 
-  if (layout === "anchored") {
-    const trackY = randRange(rng, ANCHORED_BAND[0], ANCHORED_BAND[1]);
-    return { n, layout, refLength, origin, trackY, refX: origin, refY: trackY };
-  }
+  const trackY = TRACK_Y;
+  if (layout === "anchored") return { n, layout, refLength, origin, trackY, refX: origin, refY: trackY };
 
-  const refOnTop = rng() < 0.5;
-  const refBand = refOnTop ? TOP_BAND : BOTTOM_BAND;
-  const trackBand = refOnTop ? BOTTOM_BAND : TOP_BAND;
+  const refBand = rng() < 0.5 ? REF_Y_ABOVE : REF_Y_BELOW;
   const refY = randRange(rng, refBand[0], refBand[1]);
-  const trackY = randRange(rng, trackBand[0], trackBand[1]);
 
   // Reference must fit the viewBox with margin and not line up with the origin.
   const refMaxX = TRACK_MAX_X - refLength;

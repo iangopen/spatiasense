@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MARGIN, VIEW_H, VIEW_W } from "../geometry";
 import { mulberry32 } from "../rng";
-import { BAR_H, HIT_LIMIT_TOLERANCE, OVERSHOOT_ROOM, N_MAX, N_MIN, TRACK_MAX_X, multiply, trueEndX, type Layout, type MultiplyParams } from "./multiply";
+import { BAR_H, HIT_LIMIT_TOLERANCE, MIN_DETACHED_DY, OVERSHOOT_ROOM, N_MAX, N_MIN, TRACK_MAX_X, TRACK_Y, multiply, trueEndX, type Layout, type MultiplyParams } from "./multiply";
 
 const layouts: Layout[] = ["anchored", "detached"];
 const nChoices: MultiplyParams["n"][] = [2, 3, 4, 5, 6, 7, 8, "random"];
@@ -43,16 +43,41 @@ describe("multiply.generate", () => {
           expect(inBox(t.origin, trueEndX(t), t.trackY)).toBe(true);
           // The reference bar itself (the longest one, at n = 2) must fit too.
           expect(inBox(t.refX, t.refX + t.refLength, t.refY)).toBe(true);
+          // The track is always vertically centered; only x varies.
+          expect(t.trackY).toBe(VIEW_H / 2);
+          expect(t.trackY).toBe(TRACK_Y);
           if (layout === "anchored") {
             expect(t.refX).toBe(t.origin);
             expect(t.refY).toBe(t.trackY);
           } else {
-            // Detached: different y, far enough apart that the bars never overlap.
-            expect(Math.abs(t.refY - t.trackY)).toBeGreaterThan(BAR_H * 4);
+            // Detached: above or below the track, clear of it by at least MIN_DETACHED_DY.
+            expect(Math.abs(t.refY - t.trackY)).toBeGreaterThanOrEqual(MIN_DETACHED_DY);
           }
         }
       }
     }
+  });
+
+  it("anchored track y is constant across seeds and n", () => {
+    const ys = new Set<number>();
+    for (const n of nChoices) for (let seed = 0; seed < 200; seed++) ys.add(multiply.generate({ n, layout: "anchored" }, mulberry32(seed)).trackY);
+    expect([...ys]).toEqual([300]);
+  });
+
+  it("detached reference uses both sides of the track and a wide range of x and y", () => {
+    const above: number[] = [];
+    const below: number[] = [];
+    const xs: number[] = [];
+    for (let seed = 0; seed < 1000; seed++) {
+      const t = multiply.generate({ n: "random", layout: "detached" }, mulberry32(seed));
+      (t.refY < t.trackY ? above : below).push(t.refY);
+      xs.push(t.refX);
+    }
+    expect(above.length).toBeGreaterThan(400);
+    expect(below.length).toBeGreaterThan(400);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(500);
+    expect(Math.max(...above) - Math.min(...above)).toBeGreaterThan(50);
+    expect(Math.max(...below) - Math.min(...below)).toBeGreaterThan(50);
   });
 
   it("detached reference mostly does not share the track's x", () => {
@@ -72,6 +97,15 @@ describe("multiply.generate", () => {
     const nearEdge = ends.filter((x) => x > TRACK_MAX_X - 20).length;
     expect(Math.max(...ends) - Math.min(...ends)).toBeGreaterThan(500);
     expect(nearEdge).toBeLessThan(100);
+  });
+
+  it("endpoint spread is at least 300 units for every n and both layouts", () => {
+    for (const layout of layouts) {
+      for (const n of [2, 3, 4, 5, 6, 7, 8]) {
+        const ends = Array.from({ length: 1000 }, (_, seed) => trueEndX(multiply.generate({ n, layout }, mulberry32(seed))));
+        expect(Math.max(...ends) - Math.min(...ends)).toBeGreaterThanOrEqual(300);
+      }
+    }
   });
 
   it("random n resolves to every value 2–8", () => {

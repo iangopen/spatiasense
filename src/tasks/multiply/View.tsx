@@ -61,8 +61,6 @@ export function MultiplyView({ trial, response, phase, onResponse }: ViewProps<M
         onPointerCancel={onPointerEnd}
         onKeyDown={onKeyDown}
       >
-        <rect className="stage-bg" x={0} y={0} width={VIEW_W} height={VIEW_H} />
-
         {/* Answer track: a faint line from the origin; no ticks, no landmarks. */}
         <line className="track" x1={origin} y1={trackY} x2={TRACK_MAX_X} y2={trackY} />
         {trial.layout === "detached" && (
