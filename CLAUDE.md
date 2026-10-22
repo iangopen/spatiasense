@@ -42,9 +42,7 @@ central and (b) preserves data needed for bias-over-time analysis.
 ## Environment
 
 - Ian works on both Windows (PowerShell) and macOS (zsh), synced through
-  GitHub, so every command run or documented must work in both. Every command
-  run or documented must work in
-  PowerShell. Chain commands with `;` — not `&&` (PowerShell 5.1 lacks it).
+  GitHub, so every command run or documented must work in both. Chain commands with `;` — not `&&` (PowerShell 5.1 lacks it).
 - NEVER run a command that waits for interactive input; it hangs the session.
   Use non-interactive flags, or write files by hand.
 - GitHub: `iangopen/spatiasense` (PUBLIC — required for Pages on the free
