@@ -407,14 +407,13 @@ Only verified facts. Each line says HOW it was verified.
     separation ≥ 120, endpoint spread ≥ 300 for every n: unit tests.
   - Copy my data JSON round-trips through `parseRounds` unchanged (test).
 
+- Session 3 browser checks, **checked by Ian in the dev server** (by hand,
+  not by Claude), at 390px and 1440px: the track is centered with no border;
+  keyboard focus on the play area is visible; Insight shows the "No clear bias
+  ... yet (N trials)" lines; Copy my data produced valid JSON of his rounds.
+
 ### Open / unverified
 
-- NOT PUSHED (session 3): the Chrome extension was not connected, so the
-  required browser check is undone: play a round at 390px and 1440px (centered
-  track, no border, keyboard focus on the track), read the Insight progress
-  sentences, press Copy my data. Then push, watch the Actions run, and `curl -I`
-  https://iangopen.github.io/spatiasense/ and its JS asset. `gh` is not
-  installed on this Mac; use the public API with curl for run status.
 - The new live URL is unverified; the old URL's localStorage does not carry over.
 
 - UI not yet exercised in a real browser (the Chrome extension was not
