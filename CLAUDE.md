@@ -411,10 +411,15 @@ Only verified facts. Each line says HOW it was verified.
   not by Claude), at 390px and 1440px: the track is centered with no border;
   keyboard focus on the play area is visible; Insight shows the "No clear bias
   ... yet (N trials)" lines; Copy my data produced valid JSON of his rounds.
+- LIVE (session 3, push of b391fa2): Actions run 39817883171 (polled via the
+  public API with curl) — build ✅, deploy ✅. `curl -I`: HTTP 200 for
+  https://iangopen.github.io/spatiasense/ and for its JS
+  `assets/index-BmJjCm0i.js` (filename read from the live index.html; same
+  hash as the local build). First check of the post-rename URL. Not played
+  on the live URL; the old URL's localStorage does not carry over.
 
 ### Open / unverified
 
-- The new live URL is unverified; the old URL's localStorage does not carry over.
 
 - UI not yet exercised in a real browser (the Chrome extension was not
   connected in session 1): drag, pointer capture, Enter-to-confirm, phone
