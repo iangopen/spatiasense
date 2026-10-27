@@ -60,9 +60,18 @@ GitHub Pages via GitHub Actions. Push to `main` → `.github/workflows/deploy.ym
   localStorage is per ORIGIN: history saved at the old
   `iangopenbusinessai-lab.github.io` URL does not carry over to the new one.
 
-- Build job: checkout → setup-node (Node 24, npm cache) → `npm ci` →
+- Build job: checkout → setup-node (Node 22, npm cache) → `npm ci` →
   `npm run test` → `npm run build` → upload `dist/`. Tests run BEFORE the
   build, so a failing test never ships. Deploy job: `deploy-pages`.
+- **Runner pin (2026-10-27, commit 0cd45a8):** both jobs run on `ubuntu-24.04`,
+  not `ubuntu-latest` (which moves to Ubuntu 26.04 between 2026-10-19 and
+  2026-11-19); bump it deliberately. Node is 22 (was 24; `.nvmrc` says 22; every
+  dependency `engines` range in the lockfile accepts 22.12+). The `pages`
+  concurrency group (cancel-in-progress false) and the action majors
+  (checkout@v7, setup-node@v7, upload-pages-artifact@v5, deploy-pages@v5) were
+  already current. **Restore the previous workflow** (the commit before the
+  change is `f0c2bcb`): `git checkout f0c2bcb -- .github/workflows/deploy.yml`
+  then commit and push (the `.nvmrc` can stay or be removed).
 - Pages source is "GitHub Actions" (`build_type=workflow`), not a branch.
 - Vite `base` is `/spatiasense/` for build and preview, `/` for dev. Every
   asset URL must go through Vite (imports, `public/`, or
@@ -428,6 +437,15 @@ Only verified facts. Each line says HOW it was verified.
   README's LICENSE link on github.com and raw.githubusercontent.com. The
   README has no image paths (no screenshots).
 
+- LIVE (runner pin, push of 0cd45a8): Actions run 40456742664 — build ✅
+  (193 tests in 11 files, then build), deploy ✅; image ubuntu-24.04, Node
+  v22.23.3, 0 annotations on both jobs. The deployed files (`index-Cf--1BKC.js`,
+  `index-VqjVpBR_.css`, `index.html`, `favicon.svg`) equal a fresh `npm ci`
+  build; only CR differs in `index.html` and `favicon.svg` (autocrlf on
+  Windows). Live page: title Spatiasense, started a round, confirmed one trial
+  by keyboard → "−99.4% — undershot · score 0"; round not completed, so
+  nothing was written to localStorage.
+
 ### Open / unverified
 
 - Insight with REAL played rounds on the live URL (only demo data, unit tests
@@ -591,3 +609,6 @@ Choices the spec didn't dictate, with a one-line reason.
   extension was NOT connected, so nothing was pushed (see Open).
 - **Session 4 (polish):** slider semantics, Home/End, README, MIT LICENSE,
   CLAUDE.md cleanup. No scoring, generation, insight or storage changes.
+- **Runner pin session (2026-10-27):** pulled 13 commits, then ubuntu-latest →
+  ubuntu-24.04, Node 24 → 22, `.nvmrc`; verified on run 40456742664 (see
+  STATUS). Restore command is in Deploy.
